@@ -1,0 +1,10 @@
+.venv/
+data/
+auth.yaml
+*.pyc
+__pycache__/
+.env
+*.db
+*.db-wal
+*.db-shm
+uv.lock
