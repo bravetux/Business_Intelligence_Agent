@@ -1,5 +1,6 @@
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
+from pydantic import ValidationError
 from src.models.schemas import (
     Job, JobStatus, InputType, User, UserSettings,
     AgentOutput, SearchResult, GenerationRequest
@@ -15,7 +16,7 @@ def test_job_model():
     job = Job(
         id="abc-123", user_id=1, filename="meeting.mp3",
         input_type=InputType.AUDIO_VIDEO, status=JobStatus.QUEUED,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
     assert job.normalised_text is None
     assert job.error_msg is None
@@ -37,3 +38,26 @@ def test_generation_request_artefacts():
 def test_search_result():
     r = SearchResult(content="Some text", source="meeting.mp3", score=0.92)
     assert r.score == 0.92
+
+def test_job_invalid_input_type():
+    with pytest.raises(ValidationError):
+        Job(
+            id="x", user_id=1, filename="f.mp3",
+            input_type="invalid_type", status="QUEUED",
+            created_at=datetime.now(timezone.utc)
+        )
+
+def test_job_missing_required_fields():
+    with pytest.raises(ValidationError):
+        Job(id="x", user_id=1, filename="f.mp3", input_type="audio_video")
+        # missing status and created_at
+
+def test_generation_request_job_id_must_be_string():
+    with pytest.raises(ValidationError):
+        GenerationRequest(job_id=None, user_id=1, artefacts=["mom"])
+
+def test_search_result_score_is_float():
+    # verify score is stored as float
+    r = SearchResult(content="text", source="file.txt", score="0.85")
+    assert isinstance(r.score, float)
+    assert r.score == 0.85
