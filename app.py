@@ -1,9 +1,25 @@
+# Business Intelligence Agent
+# Copyright (C) 2026  B. Vignesh Kumar (Bravetux) <ic19939@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 # app.py
 import streamlit as st
 import yaml
 from pathlib import Path
 
-st.set_page_config(page_title="P04 — Meeting Intelligence", layout="wide")
+st.set_page_config(page_title="Meeting Intelligence", layout="wide")
 
 AUTH_YAML = Path(__file__).parent / "auth.yaml"
 
@@ -23,21 +39,45 @@ authenticator = stauth.Authenticate(
     auth_cfg["cookie"]["expiry_days"],
 )
 
-# v0.3.x: login() renders the form and sets st.session_state keys.
-# It returns None when location is 'main' or 'sidebar'.
-authenticator.login(location="main")
+from src.ui import landing
 
+
+def _render_unauthenticated_landing(auth_status):
+    """Hero + login form + full feature catalogue."""
+    landing.render_hero()
+
+    # Center the login form in a narrower middle column for visual balance.
+    left, mid, right = st.columns([1, 2, 1])
+    with mid:
+        with st.container(border=True):
+            st.markdown(
+                "<div style='text-align:center; font-weight:600; color:#1F4E79; "
+                "font-size:1.1rem; margin-bottom:0.4rem;'>Sign in to continue</div>",
+                unsafe_allow_html=True,
+            )
+            authenticator.login(location="main")
+            if auth_status is False:
+                st.error("Username or password is incorrect.")
+            elif auth_status is None:
+                st.caption(
+                    "Default credentials after a fresh install: "
+                    "**admin** / **changeme**. "
+                    "Change the password in Settings after first login."
+                )
+
+    landing.render_features()
+
+
+# ── First pass: read current auth state ────────────────────────────────────
 auth_status = st.session_state.get("authentication_status")
+
+if auth_status is not True:
+    _render_unauthenticated_landing(auth_status)
+    st.stop()
+
+# ── Authenticated — proceed to the app ─────────────────────────────────────
 name = st.session_state.get("name")
 username = st.session_state.get("username")
-
-if auth_status is False:
-    st.error("Username or password is incorrect.")
-    st.stop()
-
-if auth_status is None:
-    st.info("Please enter your username and password.")
-    st.stop()
 
 from src.tools.job_store import get_or_create_user, init_schema
 init_schema()
@@ -48,11 +88,14 @@ st.session_state["username"] = username
 authenticator.logout(button_name="Logout", location="sidebar")
 st.sidebar.write(f"Logged in as **{name}**")
 
-tab_upload, tab_generate, tab_search, tab_history, tab_settings = st.tabs([
-    "Upload & Ingest", "Generate Artefacts", "Search", "History", "Settings"
+tab_home, tab_upload, tab_generate, tab_search, tab_history, tab_settings = st.tabs([
+    "Home", "Upload & Ingest", "Generate Artefacts", "Search", "History", "Settings"
 ])
 
-from src.ui import upload_tab, generate_tab, search_tab, history_tab, settings_tab
+from src.ui import home_tab, upload_tab, generate_tab, search_tab, history_tab, settings_tab
+
+with tab_home:
+    home_tab.render(name)
 
 with tab_upload:
     upload_tab.render(user.id)

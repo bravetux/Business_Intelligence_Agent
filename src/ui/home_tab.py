@@ -14,3 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+# src/ui/home_tab.py
+"""Post-login home tab — hero + same feature catalogue shown on the login page,
+plus a personalised welcome line and a quick-start nudge."""
+import streamlit as st
+
+from src.ui import landing
+
+
+def render(username: str):
+    landing.render_hero()
+    st.markdown(
+        f"<div style='text-align:center; font-size:1.05rem; margin-bottom:0.6rem;'>"
+        f"Welcome, <b>{username}</b>.</div>",
+        unsafe_allow_html=True,
+    )
+    landing.render_features()

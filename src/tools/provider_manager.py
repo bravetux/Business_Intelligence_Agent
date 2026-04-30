@@ -1,3 +1,19 @@
+# Business Intelligence Agent
+# Copyright (C) 2026  B. Vignesh Kumar (Bravetux) <ic19939@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 # src/tools/provider_manager.py
 """Provider configuration and model factory for Meeting & Document Intelligence Platform.
 
@@ -12,8 +28,9 @@ import logging
 from typing import Optional
 
 from src.config import (DEFAULT_PROVIDER, DEFAULT_MODEL, OLLAMA_HOST,
-                        AWS_REGION, LMSTUDIO_HOST, OPENROUTER_API_KEY,
-                        OPENAI_API_KEY, GEMINI_API_KEY)
+                        AWS_REGION, BEDROCK_MODEL_ID, LMSTUDIO_HOST,
+                        OPENROUTER_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY,
+                        AGENT_TEMPERATURE, AGENT_TOP_P, AGENT_MAX_TOKENS)
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +40,7 @@ def get_model(provider: str = None, model_id: str = None):
 
     Falls back to DEFAULT_PROVIDER / DEFAULT_MODEL from config if args are None.
 
-    Supported providers: ollama, bedrock, lmstudio, openrouter, openai, gemini, custom
+    Supported providers: ollama, aws (alias: bedrock), lmstudio, openrouter, openai, gemini, custom
 
     Args:
         provider: Provider name (case-insensitive). Defaults to DEFAULT_PROVIDER.
@@ -44,9 +61,18 @@ def get_model(provider: str = None, model_id: str = None):
         from strands.models.ollama import OllamaModel
         return OllamaModel(host=OLLAMA_HOST, model_id=m)
 
-    if p == "bedrock":
+    if p in ("aws", "bedrock"):
+        # boto3 reads AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN,
+        # and AWS_DEFAULT_REGION directly from environment after load_dotenv().
         from strands.models.bedrock import BedrockModel
-        return BedrockModel(model_id=m, region_name=AWS_REGION)
+        bedrock_model = BEDROCK_MODEL_ID or m
+        return BedrockModel(
+            model_id=bedrock_model,
+            region_name=AWS_REGION,
+            temperature=AGENT_TEMPERATURE,
+            top_p=AGENT_TOP_P,
+            max_tokens=AGENT_MAX_TOKENS,
+        )
 
     if p in ("lmstudio", "openai", "openrouter", "gemini", "custom"):
         from strands.models.openai import OpenAIModel
@@ -75,5 +101,5 @@ def get_model(provider: str = None, model_id: str = None):
 
     raise ValueError(
         f"Unknown provider: '{p}'. "
-        f"Supported: ollama, bedrock, lmstudio, openrouter, openai, gemini, custom"
+        f"Supported: ollama, aws (alias: bedrock), lmstudio, openrouter, openai, gemini, custom"
     )

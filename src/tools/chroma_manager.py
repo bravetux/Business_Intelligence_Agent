@@ -1,3 +1,19 @@
+# Business Intelligence Agent
+# Copyright (C) 2026  B. Vignesh Kumar (Bravetux) <ic19939@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 # src/tools/chroma_manager.py
 """ChromaDB manager — per-user and shared-org document collections.
 
@@ -75,6 +91,33 @@ def add_chunks(
     _add(_user_collection_name(user_id))
     if shared:
         _add(CHROMA_SHARED_COLLECTION)
+
+
+def delete_job_chunks(user_id: int, job_id: str) -> None:
+    """Remove all chunks for *job_id* from the user's collection (and the
+    shared collection, if present). Safe to call when collections / chunks
+    don't exist."""
+    client = _get_client()
+    for col_name in (_user_collection_name(user_id), CHROMA_SHARED_COLLECTION):
+        try:
+            col = client.get_collection(col_name)
+        except Exception:
+            continue
+        try:
+            col.delete(where={"job_id": job_id})
+        except Exception:
+            # Older Chroma versions may raise on empty match; not fatal.
+            pass
+
+
+def delete_user_collection(user_id: int) -> None:
+    """Drop the user's private collection entirely (e.g. for a "clear all" action).
+    The shared collection is left untouched."""
+    client = _get_client()
+    try:
+        client.delete_collection(_user_collection_name(user_id))
+    except Exception:
+        pass
 
 
 def search_user(

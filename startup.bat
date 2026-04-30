@@ -2,14 +2,29 @@
 :: Author : B.Vignesh Kumar aka Bravetux <ic19939@gmail.com>
 :: Date   : 23 April 2026
 :: =============================================================================
+:: ============================================================================
+:: Business Intelligence Agent
+:: Copyright (C) 2026  B. Vignesh Kumar (Bravetux) <ic19939@gmail.com>
+::
+:: This program is free software: you can redistribute it and/or modify it
+:: under the terms of the GNU General Public License as published by the
+:: Free Software Foundation, either version 3 of the License, or (at your
+:: option) any later version.
+::
+:: This program is distributed in the hope that it will be useful, but
+:: WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+:: or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+:: for more details. <https://www.gnu.org/licenses/>
+:: ============================================================================
+
 @echo off
 setlocal enabledelayedexpansion
-title P04 — Meeting ^& Document Intelligence Platform — Startup
+title Meeting ^& Document Intelligence Platform - Startup
 
 cd /d "%~dp0"
 
 echo ============================================================
-echo   P04 — Meeting ^& Document Intelligence Platform
+echo   Meeting ^& Document Intelligence Platform
 echo   Startup Check
 echo ============================================================
 echo.
@@ -51,7 +66,7 @@ if not exist ".env" (
         echo          Copying .env.example to .env...
         copy ".env.example" ".env" >nul
         echo   [WARN] .env created from template.
-        echo          Default provider is Ollama (zero cost).
+        echo          Default provider is Ollama ^(zero cost^).
         echo          Edit .env to add Bedrock/OpenAI/other API keys if needed.
         echo.
         set /p OPEN_ENV="   Open .env in Notepad now? [Y/N]: "
@@ -88,7 +103,7 @@ if errorlevel 1 (
     echo            ollama pull llama3.3:70b
     echo            ollama pull nomic-embed-text
     echo.
-    set /p CONTINUE="   Continue anyway (you can use a different provider)? [Y/N]: "
+    set /p CONTINUE="   Continue anyway ^(you can use a different provider^)? [Y/N]: "
     if /i "!CONTINUE!" NEQ "Y" goto :error
     echo   [SKIP] Ollama check skipped — ensure your configured provider is reachable.
 ) else (
@@ -99,7 +114,7 @@ if errorlevel 1 (
     if errorlevel 1 (
         echo   [WARN] llama3.3:70b not found locally.
         echo          Run:  ollama pull llama3.3:70b
-        echo          (or set DEFAULT_MODEL= in .env to another installed model)
+        echo          ^(or set DEFAULT_MODEL= in .env to another installed model^)
     ) else (
         echo   [OK]   llama3.3:70b found.
     )
@@ -157,7 +172,7 @@ if !PORT_FREE! == 0 (
 echo   [OK]   Port 8503 is free.
 
 :: ── 8. Launch ────────────────────────────────────────────────
-echo [8/8] Launching P04 Meeting ^& Document Intelligence Platform...
+echo [8/8] Launching Meeting ^& Document Intelligence Platform...
 echo.
 echo ============================================================
 echo   App starting at: http://localhost:8503

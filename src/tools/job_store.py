@@ -1,3 +1,19 @@
+# Business Intelligence Agent
+# Copyright (C) 2026  B. Vignesh Kumar (Bravetux) <ic19939@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import sqlite3
 import uuid
 from datetime import datetime
@@ -49,6 +65,11 @@ def init_schema():
                 FOREIGN KEY (user_id) REFERENCES users(id)
             );
         """)
+        # Idempotent column adds for existing installs.
+        existing_cols = {row["name"] for row in c.execute("PRAGMA table_info(settings)").fetchall()}
+        for col in ("confluence_email", "jira_email"):
+            if col not in existing_cols:
+                c.execute(f"ALTER TABLE settings ADD COLUMN {col} TEXT")
 
 
 def get_or_create_user(username: str) -> User:
@@ -103,6 +124,23 @@ def list_jobs(user_id: int) -> List[Job]:
     return [Job(**{**dict(r), "created_at": datetime.fromisoformat(r["created_at"])}) for r in rows]
 
 
+def delete_job(job_id: str, user_id: int) -> bool:
+    """Delete a single job row scoped to user_id. Returns True if a row was removed."""
+    with _conn() as c:
+        cur = c.execute("DELETE FROM jobs WHERE id=? AND user_id=?", (job_id, user_id))
+        return cur.rowcount > 0
+
+
+def delete_all_jobs(user_id: int) -> List[str]:
+    """Delete every job belonging to user_id. Returns the list of deleted job IDs."""
+    with _conn() as c:
+        rows = c.execute("SELECT id FROM jobs WHERE user_id=?", (user_id,)).fetchall()
+        ids = [r["id"] for r in rows]
+        if ids:
+            c.execute("DELETE FROM jobs WHERE user_id=?", (user_id,))
+    return ids
+
+
 def get_settings(user_id: int) -> UserSettings:
     with _conn() as c:
         row = c.execute("SELECT * FROM settings WHERE user_id=?", (user_id,)).fetchone()
@@ -117,14 +155,19 @@ def save_settings(s: UserSettings):
     with _conn() as c:
         c.execute("""
             INSERT INTO settings
-              (user_id,provider,model,confluence_url,confluence_token,
-               jira_url,jira_token,target_lang,share_to_org)
-            VALUES (?,?,?,?,?,?,?,?,?)
+              (user_id,provider,model,confluence_url,confluence_email,confluence_token,
+               jira_url,jira_email,jira_token,target_lang,share_to_org)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(user_id) DO UPDATE SET
               provider=excluded.provider, model=excluded.model,
               confluence_url=excluded.confluence_url,
+              confluence_email=excluded.confluence_email,
               confluence_token=excluded.confluence_token,
-              jira_url=excluded.jira_url, jira_token=excluded.jira_token,
+              jira_url=excluded.jira_url,
+              jira_email=excluded.jira_email,
+              jira_token=excluded.jira_token,
               target_lang=excluded.target_lang, share_to_org=excluded.share_to_org
-        """, (s.user_id, s.provider, s.model, s.confluence_url, s.confluence_token,
-              s.jira_url, s.jira_token, s.target_lang, int(s.share_to_org)))
+        """, (s.user_id, s.provider, s.model,
+              s.confluence_url, s.confluence_email, s.confluence_token,
+              s.jira_url, s.jira_email, s.jira_token,
+              s.target_lang, int(s.share_to_org)))
